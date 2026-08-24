@@ -8,13 +8,16 @@
 // Assumed ESP32-S3-DevKitC-1 wiring. Keep this block aligned with the PCB.
 constexpr uint8_t keyPins[] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 constexpr uint8_t encoderPins[][3] = {
-  {16, 17, 18}, {21, 35, 36}, {37, 38, 39}, {40, 41, 42}
+  {16, 17, 18}, {21, 35, 36}
 };
 constexpr uint8_t displaySck = 43;
 constexpr uint8_t displayMosi = 44;
 constexpr uint8_t displayCs = 1;
 constexpr uint8_t displayDc = 2;
 constexpr uint8_t displayRst = 3;
+// The attached wiring diagram shows the 240x320 ST7789 display following this order:
+// VCC, GND, DIN, CLK, CS, DC, RST, BL. The corresponding ESP32-S3 SPI pins are:
+// MOSI=44, SCK=43, CS=1, DC=2, RST=3. Backlight is not actively driven here.
 
 constexpr uint32_t debounceMs = 25;
 constexpr uint32_t screenRefreshMs = 250;
@@ -33,11 +36,12 @@ struct EncoderState {
   uint8_t lastAB = 0;
   KeyState button;
   bool muted = false;
+  uint8_t level = 60;
 };
 
 KeyState keys[12];
-EncoderState encoders[4];
-int8_t encoderDelta[4] = {};
+EncoderState encoders[2];
+int8_t encoderDelta[2] = {};
 uint32_t lastScreenRefresh = 0;
 
 void sendShortcut(uint8_t modifier, uint8_t key) {
@@ -90,7 +94,8 @@ void handleEncoders() {
   static const int8_t transitionTable[16] = {
     0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0
   };
-  for (uint8_t index = 0; index < 4; ++index) {
+
+  for (uint8_t index = 0; index < 2; ++index) {
     uint8_t a = digitalRead(encoderPins[index][0]);
     uint8_t b = digitalRead(encoderPins[index][1]);
     uint8_t currentAB = (a << 1) | b;
@@ -98,43 +103,106 @@ void handleEncoders() {
     int8_t direction = transitionTable[transition];
     encoders[index].lastAB = currentAB;
     encoderDelta[index] += direction;
+
     if (encoderDelta[index] >= 4) {
-      consumer.write(CONSUMER_VOLUME_INCREMENT);
+      if (index == 0) {
+        if (encoders[index].muted) {
+          encoders[index].muted = false;
+        }
+        encoders[index].level = constrain(encoders[index].level + 5, 0, 100);
+        consumer.press(CONSUMER_CONTROL_VOLUME_INCREMENT);
+        consumer.release();
+      } else {
+        encoders[index].muted = false;
+        encoders[index].level = constrain(encoders[index].level + 5, 0, 100);
+      }
       encoderDelta[index] = 0;
     } else if (encoderDelta[index] <= -4) {
-      consumer.write(CONSUMER_VOLUME_DECREMENT);
+      if (index == 0) {
+        encoders[index].level = constrain(encoders[index].level - 5, 0, 100);
+        consumer.press(CONSUMER_CONTROL_VOLUME_DECREMENT);
+        consumer.release();
+      } else {
+        encoders[index].muted = false;
+        encoders[index].level = constrain(encoders[index].level - 5, 0, 100);
+      }
       encoderDelta[index] = 0;
     }
+
     if (debouncedPressed(encoders[index].button,
                          digitalRead(encoderPins[index][2]))) {
       encoders[index].muted = !encoders[index].muted;
-      consumer.write(CONSUMER_MUTE);
+      if (encoders[index].muted) {
+        encoders[index].level = 0;
+      } else if (index == 0) {
+        encoders[index].level = static_cast<uint8_t>(max((int)encoders[index].level, 20));
+      }
+      if (index == 0) {
+        consumer.press(CONSUMER_CONTROL_MUTE);
+        consumer.release();
+      }
     }
+  }
+}
+
+void drawSpeakerIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
+  screen.drawTriangle(x + 8, y + 2, x + 8, y + 24, x + 22, y + 13, color);
+  screen.fillRect(x + 20, y + 7, 6, 14, color);
+  screen.drawLine(x + 28, y + 7, x + 34, y + 2, color);
+  screen.drawLine(x + 28, y + 20, x + 34, y + 25, color);
+  if (muted) {
+    screen.drawLine(x, y, x + 40, y + 28, ST77XX_RED);
+    screen.drawLine(x + 40, y, x, y + 28, ST77XX_RED);
+  }
+}
+
+void drawMicIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
+  screen.drawCircle(x + 18, y + 10, 10, color);
+  screen.drawLine(x + 18, y + 18, x + 18, y + 28, color);
+  screen.drawLine(x + 10, y + 24, x + 26, y + 24, color);
+  screen.drawLine(x + 14, y + 28, x + 22, y + 28, color);
+  if (muted) {
+    screen.drawLine(x, y, x + 36, y + 30, ST77XX_RED);
+    screen.drawLine(x + 36, y, x, y + 30, ST77XX_RED);
+  }
+}
+
+void drawVolumeBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                  uint8_t value, bool muted, uint16_t color) {
+  screen.drawRoundRect(x, y, w, h, 8, ST77XX_WHITE);
+  uint16_t fillHeight = map(value, 0, 100, 0, h - 12);
+  uint16_t barY = y + h - 6 - fillHeight;
+  if (!muted && value > 0) {
+    screen.fillRoundRect(x + 6, barY, w - 12, fillHeight, 6, color);
+  }
+  if (muted) {
+    screen.drawLine(x + 4, y + 4, x + w - 4, y + h - 4, ST77XX_RED);
+    screen.drawLine(x + w - 4, y + 4, x + 4, y + h - 4, ST77XX_RED);
   }
 }
 
 void refreshScreen() {
   if (millis() - lastScreenRefresh < screenRefreshMs) return;
   lastScreenRefresh = millis();
+
   screen.fillScreen(ST77XX_BLACK);
   screen.setTextColor(ST77XX_CYAN);
   screen.setTextSize(2);
-  screen.setCursor(8, 8);
-  screen.print("STREAM DECK");
+  screen.setCursor(58, 8);
+  screen.print("AUDIO");
+
+  drawVolumeBar(28, 56, 54, 190, encoders[0].level, encoders[0].muted, ST77XX_GREEN);
+  drawVolumeBar(158, 56, 54, 190, encoders[1].level, encoders[1].muted, ST77XX_BLUE);
+
+  drawSpeakerIcon(26, 256, ST77XX_WHITE, encoders[0].muted);
+  drawMicIcon(156, 256, ST77XX_WHITE, encoders[1].muted);
+
   screen.setTextColor(ST77XX_WHITE);
   screen.setTextSize(1);
-  screen.setCursor(8, 38);
-  screen.print("12 MACROS   4 VOLUME CHANNELS");
-  for (uint8_t index = 0; index < 4; ++index) {
-    uint16_t x = 8 + (index % 2) * 116;
-    uint16_t y = 70 + (index / 2) * 70;
-    screen.drawRect(x, y, 104, 52, ST77XX_BLUE);
-    screen.setCursor(x + 8, y + 8);
-    screen.print("ENC ");
-    screen.print(index + 1);
-    screen.setCursor(x + 8, y + 28);
-    screen.print(encoders[index].muted ? "MUTED" : "ACTIVE");
-  }
+  screen.setCursor(28, 248);
+  screen.print("SPKR");
+  screen.setCursor(162, 248);
+  screen.print("MIC");
 }
 
 void setup() {
