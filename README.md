@@ -6,7 +6,7 @@ This project targets the Espressif ESP32-S3-DevKitC-1 using the Arduino framewor
 
 Open this folder in VS Code with the PlatformIO IDE extension installed, then use the PlatformIO actions to build, upload, or open the serial monitor.
 
-The firmware implements a 4 x 3 macro-key grid, four rotary encoders with push-to-mute, and a 240 x 320 ST7789 SPI display.
+The firmware implements a 4 x 3 macro-key grid, two rotary encoders with push-to-mute, and a 240 x 320 ST7789 SPI display.
 
 ## Assumed wiring
 
@@ -21,5 +21,24 @@ Change the pin map if it does not match the PCB. GPIO 19 and 20 are intentionall
 ## Key behavior
 
 The default key macros are Windows-friendly shortcuts in `runMacro()`. Replace those cases with the shortcuts used by the host applications. HID can launch programs through an OS shortcut such as `Win+R`, but it cannot launch a desktop executable directly without a host-side launcher.
+
+### Macro buttons
+
+The buttons are assigned left-to-right, top-to-bottom:
+
+| Button | Macro |
+| --- | --- |
+| 1 | Calculator |
+| 2 | Teams |
+| 3 | Bambu Studio |
+| 4 | Steam |
+| 5 | Signal |
+| 6 | Copilot |
+| 7 | PlatformIO |
+| 8 | LinkedIn |
+| 9 | Outlook |
+| 10 | Excel |
+| 11 | Word |
+| 12 | PowerPoint |
 
 Each encoder sends a consumer-control volume increment/decrement per detent. Its push switch sends mute and updates the display state.
