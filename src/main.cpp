@@ -75,12 +75,12 @@ void openChromeURL(const char *url) {
 void runMacro(uint8_t index) {
   // Replace entries here with the shortcuts used by the host OS or launcher.
   switch (index) {
-    case 0: openRunCommand("chrome.exe"); break;
-    case 1: openRunCommand("msteams"); break;
-    case 2: openRunCommand("bambu-studio"); break;
-    case 3: openRunCommand("steam"); break;
-    case 4: openRunCommand("signal"); break;
-    case 5: openRunCommand("copilot"); break;
+    case 0: openRunCommand("calc"); break;
+    case 1: openRunCommand("msteams:"); break;
+    case 2: openRunCommand("C:\\Program Files\\Bambu Studio\\bambu-studio.exe"); break;
+    case 3: openRunCommand("steam://"); break;
+    case 4: openRunCommand("%USERPROFILE%\\AppData\\Local\\Programs\\signal-desktop\\Signal.exe"); break;
+    case 5: openRunCommand("ms-copilot:"); break;
     case 6: openRunCommand("code"); break;
     case 7: openChromeURL("https://www.linkedin.com"); break;
     case 8: openChromeURL("https://outlook.office.com"); break;
