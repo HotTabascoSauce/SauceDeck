@@ -43,6 +43,10 @@ KeyState keys[12];
 EncoderState encoders[2];
 int8_t encoderDelta[2] = {};
 uint32_t lastScreenRefresh = 0;
+uint8_t lastSpeakerLevel = 255;
+uint8_t lastMicLevel = 255;
+bool lastSpeakerMuted = true;
+bool lastMicMuted = true;
 
 void sendShortcut(uint8_t modifier, uint8_t key) {
   keyboard.press(modifier);
@@ -51,21 +55,38 @@ void sendShortcut(uint8_t modifier, uint8_t key) {
   keyboard.releaseAll();
 }
 
+void openRunCommand(const char *command) {
+  sendShortcut(KEY_LEFT_GUI, 'r');
+  delay(300);
+  keyboard.print(command);
+  delay(100);
+  keyboard.press(KEY_RETURN);
+  delay(20);
+  keyboard.releaseAll();
+}
+
+
+
+void openChromeURL(const char *url) {
+  String command = String("chrome.exe ") + url;
+  openRunCommand(command.c_str());
+}
+
 void runMacro(uint8_t index) {
   // Replace entries here with the shortcuts used by the host OS or launcher.
   switch (index) {
-    case 0: sendShortcut(KEY_LEFT_CTRL, 'c'); break;
-    case 1: sendShortcut(KEY_LEFT_CTRL, 'v'); break;
-    case 2: sendShortcut(KEY_LEFT_CTRL, 'z'); break;
-    case 3: sendShortcut(KEY_LEFT_CTRL, 's'); break;
-    case 4: sendShortcut(KEY_LEFT_ALT, KEY_TAB); break;
-    case 5: sendShortcut(KEY_LEFT_GUI, 'e'); break;
-    case 6: sendShortcut(KEY_LEFT_GUI, 'r'); break;
-    case 7: sendShortcut(KEY_LEFT_GUI, 'l'); break;
-    case 8: sendShortcut(KEY_LEFT_CTRL, 't'); break;
-    case 9: sendShortcut(KEY_LEFT_CTRL, 'w'); break;
-    case 10: sendShortcut(KEY_LEFT_GUI, 'd'); break;
-    case 11: sendShortcut(KEY_LEFT_ALT, KEY_F4); break;
+    case 0: openRunCommand("chrome.exe"); break;
+    case 1: openRunCommand("msteams"); break;
+    case 2: openRunCommand("bambu-studio"); break;
+    case 3: openRunCommand("steam"); break;
+    case 4: openRunCommand("signal"); break;
+    case 5: openRunCommand("copilot"); break;
+    case 6: openRunCommand("code"); break;
+    case 7: openChromeURL("https://www.linkedin.com"); break;
+    case 8: openChromeURL("https://outlook.office.com"); break;
+    case 9: openChromeURL("https://www.office.com/launch/excel"); break;
+    case 10: openChromeURL("https://www.office.com/launch/word"); break;
+    case 11: openChromeURL("https://www.office.com/launch/powerpoint"); break;
   }
 }
 
@@ -167,22 +188,21 @@ void drawMicIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
   }
 }
 
-void drawVolumeBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                  uint8_t value, bool muted, uint16_t color) {
-  screen.drawRoundRect(x, y, w, h, 8, ST77XX_WHITE);
-  uint16_t fillHeight = map(value, 0, 100, 0, h - 12);
-  uint16_t barY = y + h - 6 - fillHeight;
-  if (!muted && value > 0) {
-    screen.fillRoundRect(x + 6, barY, w - 12, fillHeight, 6, color);
-  }
-  if (muted) {
-    screen.drawLine(x + 4, y + 4, x + w - 4, y + h - 4, ST77XX_RED);
-    screen.drawLine(x + w - 4, y + 4, x + 4, y + h - 4, ST77XX_RED);
-  }
-}
-
 void refreshScreen() {
-  if (millis() - lastScreenRefresh < screenRefreshMs) return;
+  uint8_t speakerLevel = encoders[0].level;
+  uint8_t micLevel = encoders[1].level;
+  bool speakerMuted = encoders[0].muted;
+  bool micMuted = encoders[1].muted;
+
+  if (speakerLevel == lastSpeakerLevel && micLevel == lastMicLevel &&
+      speakerMuted == lastSpeakerMuted && micMuted == lastMicMuted) {
+    return;
+  }
+
+  lastSpeakerLevel = speakerLevel;
+  lastMicLevel = micLevel;
+  lastSpeakerMuted = speakerMuted;
+  lastMicMuted = micMuted;
   lastScreenRefresh = millis();
 
   screen.fillScreen(ST77XX_BLACK);
@@ -191,17 +211,34 @@ void refreshScreen() {
   screen.setCursor(58, 8);
   screen.print("AUDIO");
 
-  drawVolumeBar(28, 56, 54, 190, encoders[0].level, encoders[0].muted, ST77XX_GREEN);
-  drawVolumeBar(158, 56, 54, 190, encoders[1].level, encoders[1].muted, ST77XX_BLUE);
+  uint16_t speakerX = 28;
+  uint16_t speakerY = 70;
+  uint16_t micX = 156;
+  uint16_t micY = 70;
 
-  drawSpeakerIcon(26, 256, ST77XX_WHITE, encoders[0].muted);
-  drawMicIcon(156, 256, ST77XX_WHITE, encoders[1].muted);
+  if (speakerMuted) {
+    screen.setTextColor(ST77XX_RED);
+    screen.setTextSize(4);
+    screen.setCursor(speakerX + 10, speakerY + 12);
+    screen.print("X");
+  } else {
+    drawSpeakerIcon(speakerX, speakerY, ST77XX_GREEN, false);
+  }
+
+  if (micMuted) {
+    screen.setTextColor(ST77XX_RED);
+    screen.setTextSize(4);
+    screen.setCursor(micX + 10, micY + 12);
+    screen.print("X");
+  } else {
+    drawMicIcon(micX, micY, ST77XX_BLUE, false);
+  }
 
   screen.setTextColor(ST77XX_WHITE);
   screen.setTextSize(1);
-  screen.setCursor(28, 248);
+  screen.setCursor(28, 230);
   screen.print("SPKR");
-  screen.setCursor(162, 248);
+  screen.setCursor(158, 230);
   screen.print("MIC");
 }
 
