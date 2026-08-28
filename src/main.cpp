@@ -7,7 +7,7 @@
 #include <SPI.h>
 
 // Assumed ESP32-S3-DevKitC-1 wiring. Keep this block aligned with the PCB.
-constexpr uint8_t keyPins[] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+constexpr uint8_t keyPins[] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 38, 14, 15};
 constexpr uint8_t encoderPins[][3] = {
   {16, 17, 18}, {37, 36, 35}
 };
@@ -43,7 +43,7 @@ struct EncoderState {
   uint8_t lastAB = 0;
   KeyState button;
   bool muted = false;
-  uint16_t level = 120;
+  uint16_t level = 20;
 };
 
 KeyState keys[12];
@@ -279,7 +279,7 @@ void drawMicIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
 }
 
 void drawBootMessage() {
-  constexpr char topLine[] = "SauceDeck V1.0";
+  constexpr char topLine[] = "SauceDeck V1.1";
   constexpr char bottomLine[] = "by HotTabascoSauce";
   int16_t textX;
   int16_t textY;
@@ -325,12 +325,14 @@ void refreshScreen() {
   screen.fillScreen(ST77XX_BLACK);
 
   drawMeter(72, speakerMuted ? 0 : speakerLevel, ST77XX_CYAN);
-  drawMeter(211, micMuted ? 0 : micLevel, 0x87E0);
+  drawMeter(230, micMuted ? 0 : micLevel, 0x87E0);
   drawSpeakerIcon(44, 146, ST77XX_WHITE, speakerMuted);
   drawMicIcon(208, 138, ST77XX_WHITE, micMuted);
 }
 
 void setup() {
+  encoders[0].level = 20;
+  encoders[1].level = 20;
   for (uint8_t pin : keyPins) pinMode(pin, INPUT_PULLUP);
   for (auto &encoder : encoderPins) {
     pinMode(encoder[0], INPUT_PULLUP);
