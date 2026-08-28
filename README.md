@@ -8,6 +8,12 @@ Open this folder in VS Code with the PlatformIO IDE extension installed, then us
 
 The firmware implements a 4 x 3 macro-key grid, two rotary encoders with push-to-mute, and a 240 x 320 ST7789 SPI display.
 
+## Wokwi Hardware Visualizer
+
+The project includes a Wokwi Hardware Visualizer circuit in `diagram.json`. It models the ESP32-S3-DevKitC-1, twelve macro buttons, both rotary encoders, and the SPI display using the pin assignments in `src/main.cpp`. The `wokwi.toml` file points the visualizer to the PlatformIO build output.
+
+Install the Wokwi for VS Code extension, build the project, then open the Command Palette and run **Wokwi: Start Simulator**. Use the buttons and rotary encoders in the visualizer to test the macro inputs and volume display behavior.
+
 ## Assumed wiring
 
 The GPIO map is at the top of `src/main.cpp`. It assumes active-low switches wired to ground with the internal pull-ups enabled:
