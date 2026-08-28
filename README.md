@@ -1,3 +1,45 @@
+## Getting Started
+
+### Initial Setup
+
+When connecting the SauceDeck to a computer for the first time:
+
+1. Rotate both encoder dials counterclockwise (CCW) until:
+   - Computer speaker volume = 0%
+   - Microphone volume = 0%
+2. Press both encoder push-buttons simultaneously.
+3. The SauceDeck will initialize and synchronize its volume controls with the host computer.
+
+### Custom Keycaps
+
+Custom keycaps can be generated and 3D printed using the MakerWorld Custom Keycap Generator:
+
+https://makerworld.com/en/models/2959969-custom-keycap-generator?from=search#profileId-3317786
+
+### Reassigning Keys
+
+Key assignments can be customized by editing the macro definitions in:
+
+```text
+src/main.cpp
+```
+
+### CAD Files
+
+CAD Files are available on MakerWorld:
+
+https://makerworld.com/en/models/3232541-saucedeck-v1-0
+
+### Hardware BOM
+| Component | Quantity | Link |
+| --- | --- | --- |
+| ESP32-S3-devkitc-1 | 1 | https://a.co/d/0ggqZs1f |
+| 2-Pin Momentary Keys/Switches | 12 | https://a.co/d/05lZVU2I |
+| Rotary Encoders with Push Button | 2 | https://a.co/d/03fAb7uL |
+| 2.0" TFT Display | 1 | https://a.co/d/05q5sujX |
+| M3x8 Bolts | 4 | N/A|
+| M3 Heat Inserts | 4 | N/A |
+
 # ESP32-S3 PlatformIO Project
 
 This project targets the Espressif ESP32-S3-DevKitC-1 using the Arduino framework.
