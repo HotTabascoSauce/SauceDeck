@@ -4,11 +4,12 @@
 #include <USB.h>
 #include <USBHIDKeyboard.h>
 #include <USBHIDConsumerControl.h>
+#include <SPI.h>
 
 // Assumed ESP32-S3-DevKitC-1 wiring. Keep this block aligned with the PCB.
 constexpr uint8_t keyPins[] = {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 constexpr uint8_t encoderPins[][3] = {
-  {16, 17, 18}, {21, 35, 36}
+  {16, 17, 18}, {37, 36, 35}
 };
 constexpr uint8_t displaySck = 43;
 constexpr uint8_t displayMosi = 44;
@@ -20,7 +21,7 @@ constexpr uint8_t displayRst = 3;
 // MOSI=44, SCK=43, CS=1, DC=2, RST=3. Backlight is not actively driven here.
 
 constexpr uint32_t debounceMs = 25;
-constexpr uint32_t screenRefreshMs = 250;
+constexpr uint32_t volumeScreenDurationMs = 5000;
 
 USBHIDKeyboard keyboard;
 USBHIDConsumerControl consumer;
@@ -42,11 +43,12 @@ struct EncoderState {
 KeyState keys[12];
 EncoderState encoders[2];
 int8_t encoderDelta[2] = {};
-uint32_t lastScreenRefresh = 0;
 uint8_t lastSpeakerLevel = 255;
 uint8_t lastMicLevel = 255;
 bool lastSpeakerMuted = true;
 bool lastMicMuted = true;
+uint32_t volumeScreenUntil = 0;
+bool lastRenderedVolumeScreen = false;
 
 void sendShortcut(uint8_t modifier, uint8_t key) {
   keyboard.press(modifier);
@@ -72,21 +74,25 @@ void openChromeURL(const char *url) {
   openRunCommand(command.c_str());
 }
 
+void showVolumeScreen() {
+  volumeScreenUntil = millis() + volumeScreenDurationMs;
+}
+
 void runMacro(uint8_t index) {
   // Replace entries here with the shortcuts used by the host OS or launcher.
   switch (index) {
     case 0: openRunCommand("calc"); break;
-    case 1: openRunCommand("msteams:"); break;
-    case 2: openRunCommand("C:\\Program Files\\Bambu Studio\\bambu-studio.exe"); break;
-    case 3: openRunCommand("steam://"); break;
-    case 4: openRunCommand("%USERPROFILE%\\AppData\\Local\\Programs\\signal-desktop\\Signal.exe"); break;
+    case 1:  openRunCommand("steam://"); break;
+    case 2: openRunCommand("code"); break;
+    case 3: openRunCommand("C:\\Program Files\\Bambu Studio\\bambu-studio.exe"); break;
+    case 4: openChromeURL("https://www.linkedin.com"); break;
     case 5: openRunCommand("ms-copilot:"); break;
-    case 6: openRunCommand("code"); break;
-    case 7: openChromeURL("https://www.linkedin.com"); break;
-    case 8: openChromeURL("https://outlook.office.com"); break;
-    case 9: openChromeURL("https://www.office.com/launch/excel"); break;
-    case 10: openChromeURL("https://www.office.com/launch/word"); break;
-    case 11: openChromeURL("https://www.office.com/launch/powerpoint"); break;
+    case 6: openRunCommand("%USERPROFILE%\\AppData\\Local\\Programs\\signal-desktop\\Signal.exe"); break;
+    case 7: openRunCommand("msteams:"); break;
+    case 8: openChromeURL("https://www.office.com/launch/powerpoint"); break;
+    case 9: openChromeURL("https://www.office.com/launch/word"); break;
+    case 10: openChromeURL("https://www.office.com/launch/excel"); break;
+    case 11: openChromeURL("https://outlook.office.com"); break;
   }
 }
 
@@ -137,6 +143,7 @@ void handleEncoders() {
         encoders[index].muted = false;
         encoders[index].level = constrain(encoders[index].level + 5, 0, 100);
       }
+      showVolumeScreen();
       encoderDelta[index] = 0;
     } else if (encoderDelta[index] <= -4) {
       if (index == 0) {
@@ -147,6 +154,7 @@ void handleEncoders() {
         encoders[index].muted = false;
         encoders[index].level = constrain(encoders[index].level - 5, 0, 100);
       }
+      showVolumeScreen();
       encoderDelta[index] = 0;
     }
 
@@ -166,26 +174,69 @@ void handleEncoders() {
   }
 }
 
+constexpr uint16_t meterOutline = 0x0188;
+constexpr uint16_t muteRed = 0xF800;
+
+void drawMuteCross(uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
+  for (int8_t offset = -3; offset <= 3; ++offset) {
+    screen.drawLine(x + offset, y, x + width + offset, y + height, muteRed);
+    screen.drawLine(x + width + offset, y, x + offset, y + height, muteRed);
+  }
+}
+
+void drawMeter(uint16_t x, uint8_t level, uint16_t color) {
+  constexpr uint16_t top = 15;
+  constexpr uint16_t width = 26;
+  constexpr uint16_t height = 104;
+
+  screen.drawRect(x, top, width, height, meterOutline);
+  uint16_t fillHeight = (height - 2) * level / 100;
+  if (fillHeight > 0) {
+    screen.fillRect(x + 1, top + height - 1 - fillHeight,
+                    width - 2, fillHeight, color);
+  }
+}
+
 void drawSpeakerIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
-  screen.drawTriangle(x + 8, y + 2, x + 8, y + 24, x + 22, y + 13, color);
-  screen.fillRect(x + 20, y + 7, 6, 14, color);
-  screen.drawLine(x + 28, y + 7, x + 34, y + 2, color);
-  screen.drawLine(x + 28, y + 20, x + 34, y + 25, color);
+  screen.fillRect(x, y + 20, 18, 28, color);
+  screen.fillTriangle(x + 18, y + 20, x + 18, y + 48, x + 50, y + 4, color);
+  screen.drawCircle(x + 38, y + 34, 19, color);
+  screen.drawCircle(x + 38, y + 34, 12, ST77XX_BLACK);
+  screen.drawCircle(x + 38, y + 34, 26, color);
+  screen.drawCircle(x + 38, y + 34, 20, ST77XX_BLACK);
   if (muted) {
-    screen.drawLine(x, y, x + 40, y + 28, ST77XX_RED);
-    screen.drawLine(x + 40, y, x, y + 28, ST77XX_RED);
+    drawMuteCross(x + 4, y - 2, 60, 60);
   }
 }
 
 void drawMicIcon(uint16_t x, uint16_t y, uint16_t color, bool muted) {
-  screen.drawCircle(x + 18, y + 10, 10, color);
-  screen.drawLine(x + 18, y + 18, x + 18, y + 28, color);
-  screen.drawLine(x + 10, y + 24, x + 26, y + 24, color);
-  screen.drawLine(x + 14, y + 28, x + 22, y + 28, color);
+  screen.fillRoundRect(x + 12, y, 26, 58, 12, color);
+  screen.fillRect(x + 2, y + 42, 10, 20, color);
+  screen.fillRect(x + 38, y + 42, 10, 20, color);
+  screen.fillRect(x + 2, y + 52, 46, 10, color);
+  screen.fillRect(x + 22, y + 58, 6, 25, color);
+  screen.fillRect(x + 8, y + 83, 34, 7, color);
   if (muted) {
-    screen.drawLine(x, y, x + 36, y + 30, ST77XX_RED);
-    screen.drawLine(x + 36, y, x, y + 30, ST77XX_RED);
+    drawMuteCross(x - 2, y - 2, 54, 92);
   }
+}
+
+void drawBootMessage() {
+  constexpr char message[] = "Hello World";
+  int16_t textX;
+  int16_t textY;
+  uint16_t textWidth;
+  uint16_t textHeight;
+
+  screen.fillScreen(ST77XX_BLACK);
+  screen.setTextColor(ST77XX_WHITE);
+  screen.setTextSize(3);
+  screen.setTextWrap(false);
+  screen.getTextBounds(message, 0, 0, &textX, &textY, &textWidth, &textHeight);
+  screen.setCursor((screen.width() - textWidth) / 2,
+                   (screen.height() - textHeight) / 2);
+  screen.print(message);
+  delay(1500);
 }
 
 void refreshScreen() {
@@ -193,8 +244,19 @@ void refreshScreen() {
   uint8_t micLevel = encoders[1].level;
   bool speakerMuted = encoders[0].muted;
   bool micMuted = encoders[1].muted;
+  uint32_t now = millis();
+  bool showVolume = static_cast<int32_t>(volumeScreenUntil - now) > 0;
 
-  if (speakerLevel == lastSpeakerLevel && micLevel == lastMicLevel &&
+  if (!showVolume) {
+    if (lastRenderedVolumeScreen) {
+      screen.fillScreen(ST77XX_BLACK);
+      lastRenderedVolumeScreen = false;
+    }
+    return;
+  }
+
+  if (lastRenderedVolumeScreen &&
+      speakerLevel == lastSpeakerLevel && micLevel == lastMicLevel &&
       speakerMuted == lastSpeakerMuted && micMuted == lastMicMuted) {
     return;
   }
@@ -203,43 +265,14 @@ void refreshScreen() {
   lastMicLevel = micLevel;
   lastSpeakerMuted = speakerMuted;
   lastMicMuted = micMuted;
-  lastScreenRefresh = millis();
+  lastRenderedVolumeScreen = true;
 
   screen.fillScreen(ST77XX_BLACK);
-  screen.setTextColor(ST77XX_CYAN);
-  screen.setTextSize(2);
-  screen.setCursor(58, 8);
-  screen.print("AUDIO");
 
-  uint16_t speakerX = 28;
-  uint16_t speakerY = 70;
-  uint16_t micX = 156;
-  uint16_t micY = 70;
-
-  if (speakerMuted) {
-    screen.setTextColor(ST77XX_RED);
-    screen.setTextSize(4);
-    screen.setCursor(speakerX + 10, speakerY + 12);
-    screen.print("X");
-  } else {
-    drawSpeakerIcon(speakerX, speakerY, ST77XX_GREEN, false);
-  }
-
-  if (micMuted) {
-    screen.setTextColor(ST77XX_RED);
-    screen.setTextSize(4);
-    screen.setCursor(micX + 10, micY + 12);
-    screen.print("X");
-  } else {
-    drawMicIcon(micX, micY, ST77XX_BLUE, false);
-  }
-
-  screen.setTextColor(ST77XX_WHITE);
-  screen.setTextSize(1);
-  screen.setCursor(28, 230);
-  screen.print("SPKR");
-  screen.setCursor(158, 230);
-  screen.print("MIC");
+  drawMeter(74, speakerMuted ? 0 : speakerLevel, ST77XX_CYAN);
+  drawMeter(218, micMuted ? 0 : micLevel, 0x87E0);
+  drawSpeakerIcon(44, 146, ST77XX_WHITE, speakerMuted);
+  drawMicIcon(208, 138, ST77XX_WHITE, micMuted);
 }
 
 void setup() {
@@ -252,6 +285,7 @@ void setup() {
   SPI.begin(displaySck, -1, displayMosi, displayCs);
   screen.init(240, 320);
   screen.setRotation(1);
+  drawBootMessage();
   keyboard.begin();
   consumer.begin();
   USB.begin();

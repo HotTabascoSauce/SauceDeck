@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "author": "",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp32",
+      "top": -10,
+      "left": 1000,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ili9341",
+      "id": "display",
+      "top": 294,
+      "left": 144,
+      "rotate": 270,
+      "attrs": {}
+    },
+    { "type": "wokwi-pushbutton", "id": "key1", "top": 260, "left": 330, "attrs": { "color": "red", "label": "1", "key": "1" } },
+    { "type": "wokwi-pushbutton", "id": "key2", "top": 260, "left": 400, "attrs": { "color": "red", "label": "2", "key": "2" } },
+    { "type": "wokwi-pushbutton", "id": "key3", "top": 260, "left": 470, "attrs": { "color": "red", "label": "3", "key": "3" } },
+    { "type": "wokwi-pushbutton", "id": "key4", "top": 320, "left": 330, "attrs": { "color": "orange", "label": "4", "key": "4" } },
+    { "type": "wokwi-pushbutton", "id": "key5", "top": 320, "left": 400, "attrs": { "color": "orange", "label": "5", "key": "5" } },
+    { "type": "wokwi-pushbutton", "id": "key6", "top": 320, "left": 470, "attrs": { "color": "orange", "label": "6", "key": "6" } },
+    { "type": "wokwi-pushbutton", "id": "key7", "top": 380, "left": 330, "attrs": { "color": "yellow", "label": "7", "key": "7" } },
+    { "type": "wokwi-pushbutton", "id": "key8", "top": 380, "left": 400, "attrs": { "color": "yellow", "label": "8", "key": "8" } },
+    { "type": "wokwi-pushbutton", "id": "key9", "top": 380, "left": 470, "attrs": { "color": "yellow", "label": "9", "key": "9" } },
+    { "type": "wokwi-pushbutton", "id": "key10", "top": 440, "left": 330, "attrs": { "color": "green", "label": "10", "key": "q" } },
+    { "type": "wokwi-pushbutton", "id": "key11", "top": 440, "left": 400, "attrs": { "color": "green", "label": "11", "key": "w" } },
+    { "type": "wokwi-pushbutton", "id": "key12", "top": 440, "left": 470, "attrs": { "color": "green", "label": "12", "key": "e" } },
+    { "type": "wokwi-ky-040", "id": "speakerEncoder", "top": 230, "left": 590, "attrs": { "label": "Speaker" } },
+    { "type": "wokwi-ky-040", "id": "micEncoder", "top": 360, "left": 590, "attrs": { "label": "Mic" } }
+  ],
+
+  "connections": [
+    ["display:VCC", "esp32:3V3.1", "red"],
+    ["display:GND", "esp32:GND.2", "black"],
+    ["display:CS", "esp32:1", "green"],
+    ["display:RST", "esp32:3", "green"],
+    ["display:D/C", "esp32:2", "green"],
+    ["display:MOSI", "esp32:RX", "green"],
+    ["display:SCK", "esp32:TX", "green"],
+  
+    ["display:MISO", "esp32:13", "red"],
+    ["key1:1.l", "esp32:4", "green"], ["key1:2.l", "esp32:GND.2", "black"],
+    ["key2:1.l", "esp32:5", "green"], ["key2:2.l", "esp32:GND.2", "black"],
+    ["key3:1.l", "esp32:6", "green"], ["key3:2.l", "esp32:GND.2", "black"],
+    ["key4:1.l", "esp32:7", "green"], ["key4:2.l", "esp32:GND.2", "black"],
+    ["key5:1.l", "esp32:8", "green"], ["key5:2.l", "esp32:GND.2", "black"],
+    ["key6:1.l", "esp32:9", "green"], ["key6:2.l", "esp32:GND.2", "black"],
+    ["key7:1.l", "esp32:10", "green"], ["key7:2.l", "esp32:GND.2", "black"],
+    ["key8:1.l", "esp32:11", "green"], ["key8:2.l", "esp32:GND.2", "black"],
+    ["key9:1.l", "esp32:12", "green"], ["key9:2.l", "esp32:GND.2", "black"],
+    ["key10:1.l", "esp32:13", "green"], ["key10:2.l", "esp32:GND.2", "black"],
+    ["key11:1.l", "esp32:14", "green"], ["key11:2.l", "esp32:GND.2", "black"],
+    ["key12:1.l", "esp32:15", "green"], ["key12:2.l", "esp32:GND.2", "black"],
+    ["speakerEncoder:CLK", "esp32:16", "green"],
+    ["speakerEncoder:DT", "esp32:17", "green"],
+    ["speakerEncoder:SW", "esp32:18", "green"],
+    ["speakerEncoder:VCC", "esp32:3V3.2", "black"],
+    ["speakerEncoder:GNDC", "esp32:GND.2", "black"],
+    ["micEncoder:A", "esp32:37", "green"],
+    ["micEncoder:B", "esp32:36", "green"],
+    ["micEncoder:SW", "esp32:35", "green"],
+    ["micEncoder:C", "esp32:GND.2", "black"]
+  ],
+  "dependencies": {}
+}

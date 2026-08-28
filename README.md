@@ -13,7 +13,7 @@ The firmware implements a 4 x 3 macro-key grid, two rotary encoders with push-to
 The GPIO map is at the top of `src/main.cpp`. It assumes active-low switches wired to ground with the internal pull-ups enabled:
 
 - Keys: GPIO 4 through 15, left-to-right then top-to-bottom
-- Encoders: `{A, B, push}` on `{16,17,18}`, `{21,35,36}`, `{37,38,39}`, `{40,41,42}`
+- Encoders: `{A, B, push}` on `{16,17,18}`, `{37,36,35}`
 - Display: SCK 43, MOSI 44, CS 1, DC 2, RST 3
 
 Change the pin map if it does not match the PCB. GPIO 19 and 20 are intentionally left unused for native USB.
@@ -29,16 +29,16 @@ The buttons are assigned left-to-right, top-to-bottom:
 | Button | Macro |
 | --- | --- |
 | 1 | Calculator |
-| 2 | Teams |
-| 3 | Bambu Studio |
-| 4 | Steam |
-| 5 | Signal |
+| 2 | Steam |
+| 3 | Visual Studio Code |
+| 4 | Bambu Studio |
+| 5 | LinkedIn |
 | 6 | Copilot |
-| 7 | PlatformIO |
-| 8 | LinkedIn |
-| 9 | Outlook |
-| 10 | Excel |
-| 11 | Word |
-| 12 | PowerPoint |
+| 7 | Signal |
+| 8 | Teams |
+| 9 | PowerPoint |
+| 10 | Word |
+| 11 | Excel |
+| 12 | Outlook |
 
 Each encoder sends a consumer-control volume increment/decrement per detent. Its push switch sends mute and updates the display state.
