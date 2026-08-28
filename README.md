@@ -28,7 +28,7 @@ src/main.cpp
 
 CAD Files are available on MakerWorld:
 
-INSERT LINK HERE
+https://makerworld.com/en/models/3232541-saucedeck-v1-0
 
 ### Hardware BOM
 | Component | Quantity | Link |
