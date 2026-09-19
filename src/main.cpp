@@ -181,6 +181,12 @@ void handleEncoders() {
       if (index == 0) {
         consumer.press(CONSUMER_CONTROL_MUTE);
         consumer.release();
+      } else {
+        keyboard.press(KEY_LEFT_CTRL);
+        keyboard.press(KEY_LEFT_SHIFT);
+        keyboard.press('m');
+        delay(12);
+        keyboard.releaseAll();
       }
     }
   }
